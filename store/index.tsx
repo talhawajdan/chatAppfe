@@ -20,6 +20,7 @@ import { enableDevTools } from "@root/config";
 import { baseAPI } from "@services/base-api";
 import { authReducer } from "@store/slice/auth";
 import { micsReducer } from "./slice/mics/reducer";
+import { chatMessageAlertReducer } from "./slice/chatmessageAlert/reducer";
 
 // Fallback to a no-op storage engine for SSR
 const createNoopStorage = () => {
@@ -48,7 +49,8 @@ const persistConfig = {
 
 const appReducer = combineReducers({
   auth: authReducer,
-  mics:micsReducer,
+  mics: micsReducer,
+  newMessagesAlert: chatMessageAlertReducer,
   [baseAPI.reducerPath]: baseAPI.reducer,
 });
 
