@@ -1,7 +1,12 @@
 "use client";
+import { NoContent } from "@assets/common";
+import { FormProvider, RHFTextField } from "@components/rhf";
+import { getSocket } from "@contexts/socket/socket";
+import { socketEvent } from "@enums/event";
+import { yupResolver } from "@hookform/resolvers/yup";
+import { useSocketEvents } from "@hooks/hooks";
 import AttachFileIcon from "@mui/icons-material/AttachFile";
 import SendIcon from "@mui/icons-material/Send";
-import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   Box,
   Button,
@@ -9,29 +14,26 @@ import {
   IconButton,
   InputAdornment,
   Stack,
-  TextField,
   Typography,
+  Avatar,
 } from "@mui/material";
 import { useGetMessagesListQuery } from "@services/message/message";
 import dayjs from "dayjs";
 import { useSearchParams } from "next/navigation";
-import { NoContent } from "@assets/common";
-import * as Yup from "yup";
-import { yupResolver } from "@hookform/resolvers/yup";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
-import { FormProvider, RHFTextField } from "@components/rhf";
-import { getSocket } from "@contexts/socket/socket";
-import { socketEvent } from "@enums/event";
-import { useSocketEvents } from "@hooks/hooks";
 import { useSelector } from "react-redux";
+import * as Yup from "yup";
 const messageFormSchema: any = Yup.object().shape({
-  message: Yup.string().min(1, "Message is required"),
+  message: Yup.string()
+    .min(1, "Message is required")
+    .trim("you can't send empty message")
+    .required("Message is required"),
 });
 
 function MessageContainer(props: any) {
-  const { memberIDs } = props;
+  const { memberIDs, chatData } = props;
   const socket = getSocket();
-  console.log("memberIDs", memberIDs);
   const searchParams = useSearchParams();
   const chatId = searchParams.get("chatId");
   const chatBoxRef: any = useRef(null);
@@ -100,11 +102,11 @@ function MessageContainer(props: any) {
     resolver: yupResolver(messageFormSchema),
   });
   const { handleSubmit, reset, watch } = methods;
-  console.log("getValues", watch("message"));
   const message = watch("message");
 
   const onSubmit = async (payload: any) => {
     const { message } = payload;
+
     socket.emit(socketEvent.NewMessage, {
       chatId,
       members: [...memberIDs, userId],
@@ -237,6 +239,7 @@ function MessageContainer(props: any) {
                 </Box>
               </Box>
             }
+            hideAvatar
           />
         )}
 
@@ -278,6 +281,9 @@ function MessageContainer(props: any) {
                     color="primary"
                     endIcon={<SendIcon />}
                     type="submit"
+                    {...(chatData?.isdisabled && {
+                      disabled: chatData?.isdisabled,
+                    })}
                   >
                     Send
                   </Button>
@@ -285,6 +291,7 @@ function MessageContainer(props: any) {
               </InputAdornment>
             ),
           }}
+          {...(chatData?.isdisabled && { disabled: chatData?.isdisabled })}
         />
       </FormProvider>
     </>
@@ -293,7 +300,7 @@ function MessageContainer(props: any) {
 
 export default MessageContainer;
 const Message = (props: any) => {
-  const { content, createdAt, sender } = props;
+  const { content, createdAt, sender, hideAvatar } = props;
   const userId = useSelector((state: any) => state.auth.user?._id);
 
   return (
@@ -301,27 +308,58 @@ const Message = (props: any) => {
       gap={2}
       alignItems={sender?._id === userId ? "flex-end" : "flex-start"}
     >
-      <Box
-        sx={{
-          width: "fit-content",
-          display: "flex",
-          justifyContent: "flex-end",
-          backgroundColor:
-            sender?._id === userId ? "primary.main" : "neutral.400",
-          borderRadius: 1,
-          maxWidth: 350,
-          p: 1,
-        }}
-      >
-        <Typography variant="body1" color="common.white">
-          {content}
-        </Typography>
-      </Box>
-      {createdAt && (
-        <Typography whiteSpace={"nowrap"} color="neutral.600" fontSize={12}>
-          {dayjs(createdAt).format("hh:mm A")}
-        </Typography>
-      )}
+      <Stack flexDirection="row" gap={1}>
+        {sender?._id !== userId && (
+          <>
+            {!hideAvatar && (
+              <Avatar
+                variant="rounded"
+                src={sender?.avatar?.url}
+                alt={sender?.firstName?.charAt(0).toUpperCase()}
+                sx={{ width: 40, height: 40 }}
+              >
+                {sender?.firstName?.charAt(0).toUpperCase()}
+              </Avatar>
+            )}
+          </>
+        )}
+
+        <Stack gap={1}>
+          <Box
+            sx={{
+              width: "fit-content",
+              display: "flex",
+              justifyContent: "flex-end",
+              backgroundColor:
+                sender?._id === userId ? "primary.main" : "neutral.400",
+              borderRadius: 1,
+              maxWidth: 350,
+              wordBreak: "break-word", // Break long words to prevent overflow
+              overflowWrap: "break-word", // Ensure proper wrapping of text
+              p: 1,
+            }}
+          >
+            <Typography variant="body1" color="common.white">
+              {content}
+            </Typography>
+          </Box>
+          {createdAt && (
+            <Typography whiteSpace={"nowrap"} color="neutral.600" fontSize={12}>
+              {dayjs(createdAt).format("hh:mm A")}
+            </Typography>
+          )}
+        </Stack>
+        {sender?._id === userId && (
+          <Avatar
+            variant="rounded"
+            src={sender?.avatar?.url}
+            alt={sender?.firstName?.charAt(0).toUpperCase()}
+            sx={{ width: 40, height: 40 }}
+          >
+            {sender?.firstName?.charAt(0).toUpperCase()}
+          </Avatar>
+        )}
+      </Stack>
     </Stack>
   );
 };

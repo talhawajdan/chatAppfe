@@ -4,7 +4,8 @@ export const SEARCH = "SEARCH";
 export const REQUEST= "REQUEST";
 export const CONTACTS= "CONTACTS";
 export const CHATS = "CHATS";
-export const TAGS = [USERS, Profile, SEARCH, REQUEST, CONTACTS, CHATS];
+export const CHATSSingle = "CHATSSingle";
+export const TAGS = [USERS, Profile, SEARCH, REQUEST, CONTACTS, CHATS,CHATSSingle];
 
 export const generateTags = (result: any, TAG: string) => {
   return result

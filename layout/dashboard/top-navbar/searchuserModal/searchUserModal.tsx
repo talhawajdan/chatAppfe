@@ -22,6 +22,7 @@ import { NoContent } from "@assets/common";
 import { usePostCreateRequestMutation } from "@services/request/requestApi";
 import { LoadingButton } from "@mui/lab";
 import toast from "react-hot-toast";
+import { useDispatch } from "react-redux";
 
 function SearchUserModal() {
   const [open, setOpen] = useState(false);
@@ -52,7 +53,10 @@ function SearchUserModal() {
       <CustomModal
         isOpen={open}
         onClose={() => setOpen(false)}
-        rootSx={{ width: 600 }}
+        rootSx={{
+          width: { xs: "95%", sm: "90%", md: 600 }, // Responsive width
+          maxWidth: "100%",
+        }}
         headerLabel={"Search user"}
         closeButtonProps={{ onClick: () => setOpen(false) }}
       >

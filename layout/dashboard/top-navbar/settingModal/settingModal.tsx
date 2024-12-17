@@ -40,7 +40,10 @@ function SettingModal() {
       <CustomModal
         isOpen={open}
         onClose={() => setOpen(false)}
-        rootSx={{ width: 800 }}
+        rootSx={{
+          width: { xs: "95%", sm: "90%", md: 800 }, // Responsive width
+          maxWidth: "100%",
+        }}
         headerLabel={"Setting"}
         closeButtonProps={{ onClick: () => setOpen(false) }}
       >

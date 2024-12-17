@@ -1,5 +1,5 @@
 import { baseAPI } from "@services/base-api";
-import { CHATS } from "@services/tags";
+import { CHATS, CHATSSingle } from "@services/tags";
 
 const chatAPI = baseAPI.injectEndpoints({
   endpoints: (builder) => ({
@@ -17,7 +17,7 @@ const chatAPI = baseAPI.injectEndpoints({
         method: "GET",
         params: payload.params,
       }),
-      providesTags: [CHATS],
+      providesTags: [CHATSSingle],
     }),
     postCreateChat: builder.mutation({
       query: (payload) => ({

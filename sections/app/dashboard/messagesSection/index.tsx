@@ -6,6 +6,7 @@ import { socketEvent } from "@enums/event";
 import DeleteIcon from "@mui/icons-material/Delete";
 import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
 // import VideocamIcon from "@mui/icons-material/Videocam";
+import { useSocketEvents } from "@hooks/hooks";
 import { LoadingButton } from "@mui/lab";
 import {
   Avatar,
@@ -17,16 +18,18 @@ import {
   Typography,
   useTheme
 } from "@mui/material";
+import { Path } from "@root/path";
+import { baseAPI } from "@services/base-api";
 import {
   useDeleteChatMutation,
   useGetChatSingleListQuery,
 } from "@services/chats/chat-api";
+import { CHATSSingle } from "@services/tags";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import toast from "react-hot-toast";
+import { useDispatch } from "react-redux";
 import MessageContainer from "../messagesContainer/messageContainer";
-import { useSelector } from "react-redux";
-import { Path } from "@root/path";
 
 
 function MessagesSection() {
@@ -34,18 +37,6 @@ function MessagesSection() {
   const [onlineUsers, setOnlineUsers] = useState<any>([]);
   const router = useRouter();
   const socket:any = getSocket();
-  useEffect(() => {
-    const handleOnlineUsers = (data: any) => {
-      setOnlineUsers(data);
-    };
-    socket.emit(socketEvent.onlineUsers);
-
-    socket.on(socketEvent.onlineUsers, handleOnlineUsers);
-
-    return () => {
-      socket.off(socketEvent.onlineUsers, handleOnlineUsers);
-    };
-  }, [socket]);
   const theme = useTheme();
   const handleClick = (event: any) => {
     event.preventDefault();
@@ -58,6 +49,7 @@ function MessagesSection() {
   const searchParams = useSearchParams();
   const chatId = searchParams.get("chatId");
   const openPoper = Boolean(anchorEl);
+   const dispatch = useDispatch();
   const id = openPoper ? "simple-popover" : undefined;
   const [DeleteChat, { isLoading }] = useDeleteChatMutation();
   const handleDelete = async () => {
@@ -84,7 +76,12 @@ function MessagesSection() {
       chatId,
     },
   });
-
+const eventHandler = {
+  [socketEvent.refetchRequest]: () =>
+    dispatch(baseAPI.util.invalidateTags([CHATSSingle])),
+  [socketEvent.onlineUsers]: (data: any) => setOnlineUsers(data),
+};
+  useSocketEvents(socket, eventHandler);
   if (isLoadingChat || isFetching) {
     return (
       <Box>
@@ -92,6 +89,7 @@ function MessagesSection() {
       </Box>
     );
   }
+  console.log(data);
 
   return (
     <>
@@ -147,8 +145,12 @@ function MessagesSection() {
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          backgroundColor:onlineUsers.includes(member?._id) ? "#44b700":"neutral.500",
-                          color: onlineUsers.includes(member?._id) ? "#44b700":"neutral.500",
+                          backgroundColor: onlineUsers.includes(member?._id)
+                            ? "#44b700"
+                            : "neutral.500",
+                          color: onlineUsers.includes(member?._id)
+                            ? "#44b700"
+                            : "neutral.500",
                           boxShadow: `0 0 0 2px ${theme.palette.background.paper}`,
                           position: "relative", // To ensure the animation stays within its bounds
                           "&::after": {
@@ -159,7 +161,9 @@ function MessagesSection() {
                             width: "100%",
                             height: "100%",
                             borderRadius: "50%",
-                            backgroundColor: onlineUsers.includes(member?._id) ? "#44b700":"neutral.500",
+                            backgroundColor: onlineUsers.includes(member?._id)
+                              ? "#44b700"
+                              : "neutral.500",
                             animation: "pulse 1.5s infinite ease-in-out",
                             opacity: 0.5,
                           },
@@ -180,7 +184,9 @@ function MessagesSection() {
                         })}
                       />
                       <Typography variant="subtitle2" color="neutral.600">
-                        {onlineUsers.includes(member?._id)?"online":"offline"}
+                        {onlineUsers.includes(member?._id)
+                          ? "online"
+                          : "offline"}
                       </Typography>
                     </Stack>
                   </Stack>
@@ -206,8 +212,10 @@ function MessagesSection() {
               </IconButton>
             </Stack>
           </Stack>
-          <MessageContainer memberIDs={data?.data?.members.map((member: any) => member?._id)}/>
-         
+          <MessageContainer
+            chatData={data?.data}
+            memberIDs={data?.data?.members.map((member: any) => member?._id)}
+          />
         </Stack>
         <Popover
           id={id}

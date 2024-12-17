@@ -55,5 +55,19 @@ const useSocketEvents = (socket:any, handlers:any) => {
     };
   }, [socket, handlers]);
 };
+const getOrSaveFromStorage = ({ key, value, get }:any) => {
+  if (get)
+    return localStorage.getItem(key)
+      ? localStorage.getItem(key) ? JSON.parse(localStorage.getItem(key) as string) : null
+      : null;
+  else localStorage.setItem(key, JSON.stringify(value));
+};
 
-export { fileFormat, transformImage, getLast7Days, useSocketEvents };
+
+export {
+  fileFormat,
+  transformImage,
+  getLast7Days,
+  useSocketEvents,
+  getOrSaveFromStorage,
+};

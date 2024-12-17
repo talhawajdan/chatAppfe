@@ -7,6 +7,7 @@ import {
   IconButton,
   Pagination,
   PaginationItem,
+  Popover,
   Stack,
   Tooltip,
   Typography,
@@ -34,7 +35,21 @@ function NotificationsModal() {
   const notificationCount = useSelector(
     (state: any) => state.mics.NotificationCount
   );
-  const [open, setOpen] = useState(false);
+
+   const [anchorEl, setAnchorEl] = React.useState<HTMLButtonElement | null>(
+      null
+    );
+  
+    const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+      setAnchorEl(event.currentTarget);
+    };
+  
+    const handleClose = () => {
+      setAnchorEl(null);
+    };
+  
+    const open = Boolean(anchorEl);
+    const id = open ? "simple-popover" : undefined;
   const [params, setParams] = useState({
     search: "",
     page: 1,
@@ -53,8 +68,8 @@ function NotificationsModal() {
   return (
     <>
       <IconButton
-        onClick={() => {
-          setOpen(true);
+        onClick={(e) => {
+          handleClick(e);
           dispatch(micsActions.setNotificationCount(0));
         }}
       >
@@ -67,66 +82,80 @@ function NotificationsModal() {
           />
         </Badge>
       </IconButton>
-
-      <CustomModal
-        isOpen={open}
-        onClose={() => setOpen(false)}
-        rootSx={{ width: 500 }}
-        headerLabel={"Notifications"}
-        closeButtonProps={{ onClick: () => setOpen(false) }}
+      <Popover
+        id={id}
+        open={open}
+        anchorEl={anchorEl}
+        onClose={handleClose}
+        anchorOrigin={{
+          vertical: "bottom",
+          horizontal: 25,
+        }}
+        sx={{
+          "& .MuiPopover-paper": {
+            borderRadius: 2,
+          },
+        }}
       >
-        <Stack justifyContent={"center"} alignItems={"center"} gap={2}>
-          <Stack
-            justifyContent={"flex-start"}
-            alignItems={"flex-start"}
-            width={"100%"}
-            gap={1}
-            mt={3}
-          >
-            {isLoading || isFetching ? (
-              <Box position={"relative"}>
-                <IsFetching isFetching />
+        <Stack minHeight={400} width={400} p={1.5}>
+          <Typography fontWeight={600} variant="body1" color="initial">
+            Notifications
+          </Typography>
+          <Stack justifyContent={"center"} alignItems={"center"} gap={2}>
+            <Stack
+              justifyContent={"flex-start"}
+              alignItems={"flex-start"}
+              width={"100%"}
+              gap={1}
+              mt={3}
+              minHeight={300}
+              overflow={"auto"}
+            >
+              {isLoading || isFetching ? (
+                <Box position={"relative"}>
+                  <IsFetching isFetching />
+                </Box>
+              ) : data?.data?.request.length > 0 ? (
+                data?.data?.request?.map((item: any, index: number) => (
+                  <UserList key={index} {...item} />
+                ))
+              ) : (
+                <Box display={"flex"} justifyContent={"center"} width={"100%"}>
+                  <NoContent sx={{ fontSize: 180, opacity: 0.6 }} />
+                </Box>
+              )}
+              <Box mt="auto" ml={"auto"}>
+                <Pagination
+                  sx={{
+                    ".Mui-selected": {
+                      backgroundColor: `${theme.palette.primary.main} !important`,
+                      color: "#FFFFFF !important",
+                    },
+                  }}
+                  renderItem={(item: any) => (
+                    <PaginationItem
+                      slots={{
+                        previous: () => <>Previous</>,
+                        next: () => <>Next</>,
+                      }}
+                      {...item}
+                    />
+                  )}
+                  size="small"
+                  variant="outlined"
+                  shape="rounded"
+                  count={Number(data?.data?.meta?.totalPages) ?? 1}
+                  page={Number(data?.data?.meta?.page) ?? 1}
+                  onChange={(e, page) => {
+                    setParams((prv) => ({ ...prv, page }));
+                  }}
+                  color="primary"
+                />
               </Box>
-            ) : data?.data?.request.length > 0 ? (
-              data?.data?.request?.map((item: any, index: number) => (
-                <UserList key={index} {...item} />
-              ))
-            ) : (
-              <Box display={"flex"} justifyContent={"center"} width={"100%"}>
-                <NoContent sx={{ fontSize: 180, opacity: 0.6 }} />
-              </Box>
-            )}
-            <Box ml={"auto"}>
-              <Pagination
-                sx={{
-                  ".Mui-selected": {
-                    backgroundColor: `${theme.palette.primary.main} !important`,
-                    color: "#FFFFFF !important",
-                  },
-                }}
-                renderItem={(item: any) => (
-                  <PaginationItem
-                    slots={{
-                      previous: () => <>Previous</>,
-                      next: () => <>Next</>,
-                    }}
-                    {...item}
-                  />
-                )}
-                size="small"
-                variant="outlined"
-                shape="rounded"
-                count={Number(data?.data?.meta?.totalPages) ?? 1}
-                page={Number(data?.data?.meta?.page) ?? 1}
-                onChange={(e, page) => {
-                  setParams((prv) => ({ ...prv, page }));
-                }}
-                color="primary"
-              />
-            </Box>
+            </Stack>
           </Stack>
         </Stack>
-      </CustomModal>
+      </Popover>
     </>
   );
 }
@@ -170,12 +199,17 @@ const UserList = ({ _id, sender, ...rest }: any) => {
         {sender?.firstName} {sender?.lastName} Send you a friend request
       </Typography>
       <Tooltip title="Accept Friend Request">
-        <LoadingButton loading={isLoading} onClick={() => acceptRequest(_id)} variant="text">
+        <LoadingButton
+          size="small"
+          loading={isLoading}
+          onClick={() => acceptRequest(_id)}
+          variant="text"
+        >
           <DoneIcon sx={{ color: "primary.main" }} />
         </LoadingButton>
       </Tooltip>
       <Tooltip title="Reject Friend Request">
-        <LoadingButton variant="text">
+        <LoadingButton size="small" variant="text">
           <CloseIcon sx={{ color: "error.main" }} />
         </LoadingButton>
       </Tooltip>
