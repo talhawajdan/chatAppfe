@@ -30,6 +30,22 @@ export const metadata: Metadata = {
         type: "image/png",
         sizes: "32x32",
       },
+      
+    ],
+    
+  },
+  openGraph: {
+    title: "Chatee",
+    description: "Powered by Chatee",
+    url: "https://recruiting-pl.apiswagger.co.uk/",
+    type: "website",
+    images: [
+      {
+        url: "/favicon-32x32.png",
+        width: 1200,
+        height: 630,
+        alt: "Powered by Chatee",
+      },
     ],
   },
 };
