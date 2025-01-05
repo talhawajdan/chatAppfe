@@ -53,7 +53,7 @@ export function RHFTextField({
       control={control}
       rules={rules}
       render={({ field, fieldState: { error } }) => (
-        <Stack gap="0.6rem">
+        <Stack gap="0.6rem" width={fullWidth ? "100%" : "auto"}>
           {outerLabel && <FormLabel>{outerLabel} {required && <span style={{ color: "red" }}>*</span>}</FormLabel>}
           <TextField
             {...field}
@@ -61,13 +61,14 @@ export function RHFTextField({
             helperText={error?.message}
             type={showPassword ? "text" : type}
             variant={variant}
+            
 
+            fullWidth
             InputProps={{
               readOnly,
               endAdornment,
               startAdornment: StartIcon,
             }}
-            fullWidth={fullWidth}
             {...other}
           />
         </Stack>

@@ -107,6 +107,7 @@ export function RHFAutocompleteAsync({
               multiple={multiple}
               id={name}
               open={open}
+              
               autoComplete
               includeInputInList
               filterSelectedOptions

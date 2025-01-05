@@ -18,9 +18,10 @@ import {
   Avatar,
 } from "@mui/material";
 import { useGetMessagesListQuery } from "@services/message/message";
+import { isToday, isYesterday, format } from "date-fns";
 import dayjs from "dayjs";
-import { useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useSelector } from "react-redux";
 import * as Yup from "yup";
@@ -35,6 +36,7 @@ function MessageContainer(props: any) {
   const { memberIDs, chatData } = props;
   const socket = getSocket();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const chatId = searchParams.get("chatId");
   const chatBoxRef: any = useRef(null);
   const bottomRef: any = useRef(null);
@@ -47,32 +49,28 @@ function MessageContainer(props: any) {
   const [messages, setMessages] = useState<any[]>([]);
   const [isFetchingOlder, setIsFetchingOlder] = useState(false);
   const { data, isLoading, isFetching, isError, refetch } =
-    useGetMessagesListQuery({
-      params: { chatId: chatId, page: page, limit: 20 },
-    });
+    useGetMessagesListQuery(
+      {
+        params: { chatId: chatId, page: page, limit: 20 },
+      },
+      { skip: !chatId }
+    );
 
   useEffect(() => {
-    if (bottomRef.current) {
-      bottomRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [messages, IamTyping, userTyping]);
-
-  useEffect(() => {
-    refetch();
     if (data && data?.data?.messages) {
-      if (page === 1) {
-        // Replace messages on the first page
-        setMessages(data?.data?.messages);
-      } else {
-        // Prepend older messages
-        setMessages((prevMessages: any) => [
-          ...data?.data.messages,
-          ...prevMessages,
-        ]);
-      }
+      setMessages((prevMessages) => {
+        const newMessages = data?.data.messages;
+        // Avoid re-setting the same messages
+        if (JSON.stringify(prevMessages) === JSON.stringify(newMessages)) {
+          return prevMessages;
+        }
+        return page === 1
+          ? newMessages // Replace on first page
+          : [...newMessages, ...prevMessages]; // Append for older pages
+      });
       setIsFetchingOlder(false);
     }
-  }, [data, page, chatId]);
+  }, [data, page]);
 
   // Handle scrolling to fetch older messages
   const handleScroll = () => {
@@ -140,6 +138,9 @@ function MessageContainer(props: any) {
     [socketEvent.NewMessage]: newMessagesListener,
     [socketEvent.typing]: handleTypingEvent,
     [socketEvent.stopTyping]: () => setUserTyping(false),
+    // [socketEvent.refetchRequest]: useCallback(() => {
+    //   refetch();
+    // }, [refetch]),
   };
   // Handle typing events locally
   useEffect(() => {
@@ -161,9 +162,33 @@ function MessageContainer(props: any) {
       }, 2000);
     }
   }, [message, IamTyping, socket, chatId, userId]);
-
+  useEffect(() => {
+    if (bottomRef.current) {
+      bottomRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [newMessagesListener, IamTyping, userTyping]);
   useSocketEvents(socket, eventHandler);
-  if (isLoading || isFetching) {
+  const formatDate = (date: string) => {
+    const messageDate = new Date(date);
+    if (isToday(messageDate)) return "Today";
+    if (isYesterday(messageDate)) return "Yesterday";
+    return format(messageDate, "dd MMM yyyy");
+  };
+ const groupedMessages = useMemo(() => {
+   return messages.reduce((groups: any, message: any) => {
+     const dateKey = formatDate(message.createdAt);
+     if (!groups[dateKey]) groups[dateKey] = [];
+     groups[dateKey].push(message);
+     return groups;
+   }, {});
+ }, [messages]);
+  useEffect(() => {
+    if (isError) {
+      router.push("/dashboard");
+    }
+  }, [isError]);
+
+  if (isLoading) {
     <Stack justifyContent="center" alignItems="center">
       <CircularProgress size={24} />
     </Stack>;
@@ -199,9 +224,25 @@ function MessageContainer(props: any) {
         )}
 
         {/* Render messages */}
-        {messages.map((msg: any, index) => (
-          <Message key={index} {...msg} />
+        {Object.entries(groupedMessages).map(([dateLabel, messages]: any) => (
+          <Stack gap={1} key={dateLabel}>
+            {/* Date Label */}
+            <Typography
+              textAlign="center"
+              color="neutral.600"
+              fontSize={12}
+              mt={1}
+              mb={1}
+            >
+              {dateLabel}
+            </Typography>
+            {/* Messages for the Date */}
+            {messages.map((msg: any, index: number) => (
+              <Message key={index} {...msg} />
+            ))}
+          </Stack>
         ))}
+
         {userTyping && (
           <Message
             content={
@@ -300,8 +341,17 @@ function MessageContainer(props: any) {
 
 export default MessageContainer;
 const Message = (props: any) => {
-  const { content, createdAt, sender, hideAvatar } = props;
+  const { content, createdAt, sender, hideAvatar, system } = props;
   const userId = useSelector((state: any) => state.auth.user?._id);
+  if (system) {
+    return (
+      <Stack justifyContent="center" alignItems="center">
+        <Typography color="neutral.700" fontSize={12}>
+          {content}
+        </Typography>
+      </Stack>
+    );
+  }
 
   return (
     <Stack
@@ -313,7 +363,7 @@ const Message = (props: any) => {
           <>
             {!hideAvatar && (
               <Avatar
-                variant="rounded"
+                variant="circular"
                 src={sender?.avatar?.url}
                 alt={sender?.firstName?.charAt(0).toUpperCase()}
                 sx={{ width: 40, height: 40 }}
@@ -324,22 +374,34 @@ const Message = (props: any) => {
           </>
         )}
 
-        <Stack gap={1}>
+        <Stack
+          className="message"
+          alignItems={sender?._id === userId ? "flex-end" : "flex-start"}
+          gap={1}
+        >
           <Box
             sx={{
               width: "fit-content",
               display: "flex",
+              flexDirection: "column",
               justifyContent: "flex-end",
+              alignItems: sender?._id === userId ? "flex-end" : "flex-start",
               backgroundColor:
                 sender?._id === userId ? "primary.main" : "neutral.400",
               borderRadius: 1,
               maxWidth: 350,
               wordBreak: "break-word", // Break long words to prevent overflow
               overflowWrap: "break-word", // Ensure proper wrapping of text
-              p: 1,
+              px: 1,
+              py: 0.5,
             }}
           >
-            <Typography variant="body1" color="common.white">
+            <Typography variant="subtitle2" fontSize={11} color="common.white">
+              {sender?._id === userId
+                ? "You"
+                : `${sender?.firstName ?? ""} ${sender?.lastName ?? ""}`}
+            </Typography>
+            <Typography variant="body2" color="common.white">
               {content}
             </Typography>
           </Box>
@@ -351,7 +413,7 @@ const Message = (props: any) => {
         </Stack>
         {sender?._id === userId && (
           <Avatar
-            variant="rounded"
+            variant="circular"
             src={sender?.avatar?.url}
             alt={sender?.firstName?.charAt(0).toUpperCase()}
             sx={{ width: 40, height: 40 }}

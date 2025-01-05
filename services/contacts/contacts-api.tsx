@@ -1,5 +1,4 @@
 import { baseAPI } from "@services/base-api";
-import { CONTACTS } from "@services/tags";
 
 const ContactsListAPI = baseAPI.injectEndpoints({
   endpoints: (builder) => ({
@@ -9,10 +8,10 @@ const ContactsListAPI = baseAPI.injectEndpoints({
         method: "GET",
         params: payload.params,
       }),
-      providesTags: [CONTACTS],
+      keepUnusedDataFor: 0,
     }),
   }),
 });
 
-export const {useGetContactsListQuery}= ContactsListAPI
-
+export const { useGetContactsListQuery, useLazyGetContactsListQuery } =
+  ContactsListAPI;

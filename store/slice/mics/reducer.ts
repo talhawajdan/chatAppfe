@@ -1,7 +1,9 @@
 import { createSlice } from "@reduxjs/toolkit";
 
+
 const initialState: any = {
   NotificationCount: 0,
+  onlineUsers: [],
 };
 
 const slice = createSlice({
@@ -11,6 +13,10 @@ const slice = createSlice({
     setNotificationCount: (state: any, action) => {
       state.NotificationCount = action.payload;
     },
+    setOnlineUsers: (state: any, action) => {
+      state.onlineUsers = action.payload;
+    },
+    
   },
 });
 

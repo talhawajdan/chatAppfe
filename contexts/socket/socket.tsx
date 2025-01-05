@@ -2,8 +2,9 @@ import LogoIcon from "@assets/icons/logo-icon";
 import { SplashScreen } from "@components/splash-screen";
 import { socketEvent } from "@enums/event";
 import { BASE_URL } from "@root/config";
+import { micsActions } from "@store/slice/mics/reducer";
 import { createContext, useContext, useEffect, useState } from "react";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import io from "socket.io-client";
 
 const SocketContext = createContext<any>(null);
@@ -11,6 +12,7 @@ const SocketContext = createContext<any>(null);
 const getSocket = () => useContext(SocketContext);
 const SocketProvider = ({ children }: any) => {
   const [socket, setSocket] = useState<any>(null);
+  const dispatch=useDispatch();
   const { accessToken } = useSelector((state: any) => state.auth);
   useEffect(() => {
     if (!socket) {
@@ -33,8 +35,10 @@ const SocketProvider = ({ children }: any) => {
 
   useEffect(() => {
     if (socket) {
-      socket.on(socketEvent.onlineUsers, () => {
-        console.log("Connected to socket with ID:", socket.id);
+      socket.on(socketEvent.onlineUsers, (data:any) => {
+       
+        dispatch(micsActions.setOnlineUsers(data));
+        
       });
 
       // Cleanup socket event listeners on unmount

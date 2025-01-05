@@ -1,11 +1,12 @@
 "use client";
-import React, { useCallback, useEffect } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 
 import { NoContent } from "@assets/common";
 import LogoIcon from "@assets/icons/logo-icon";
 import { IsFetching } from "@components/table-components";
 import { getSocket } from "@contexts/socket/socket";
 import { socketEvent } from "@enums/event";
+import { useSocketEvents } from "@hooks/hooks";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import {
   Avatar,
@@ -23,27 +24,31 @@ import {
   Typography,
   useTheme,
 } from "@mui/material";
+import { baseAPI } from "@services/base-api";
 import {
   useGetChatsListQuery,
   usePostCreateChatMutation,
 } from "@services/chats/chat-api";
 import { useGetContactsListQuery } from "@services/contacts/contacts-api";
-import dayjs from "dayjs";
-import Link from "next/link";
-import toast from "react-hot-toast";
-import TopNavBar from "./top-navbar";
-import { useSocketEvents } from "@hooks/hooks";
-import { useDispatch, useSelector } from "react-redux";
+import { CHATS, CHATSSingle } from "@services/tags";
 import {
   removeNewMessagesAlert,
   setNewMessagesAlert,
 } from "@store/slice/chatmessageAlert/reducer";
+import dayjs from "dayjs";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import toast from "react-hot-toast";
+import { useDispatch, useSelector } from "react-redux";
+import CreateGroupModal from "./createGroupModal/createGroupModal";
+import TopNavBar from "./top-navbar";
+import { motion } from "framer-motion";
 
 function DashBoardLayout(props: any) {
   const { children } = props;
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [onlineUsers, setOnlineUsers] = React.useState<any>([]);
+  const dispatch = useDispatch();
 
   ///socket works
   const socket = getSocket();
@@ -51,13 +56,18 @@ function DashBoardLayout(props: any) {
     const handleOnlineUsers = (data: any) => {
       setOnlineUsers(data);
     };
+    const handleRefresh = (data: any) => {
+      dispatch(baseAPI.util.invalidateTags([CHATSSingle, CHATS]));
+    };
 
     socket.on(socketEvent.onlineUsers, handleOnlineUsers);
+    socket.on(socketEvent.refetchRequest, handleRefresh);
 
     return () => {
       socket.off(socketEvent.onlineUsers, handleOnlineUsers);
+      socket.off(socketEvent.refetchRequest, handleRefresh);
     };
-  }, [onlineUsers, socket]);
+  }, [onlineUsers, socket, dispatch]);
 
   const toggleDrawer = (newOpen: boolean) => () => {
     setDrawerOpen(newOpen);
@@ -92,9 +102,9 @@ function DashBoardLayout(props: any) {
         },
       };
 
-      const { successMessage } = await CreateChat(payload).unwrap();
+      await CreateChat(payload).unwrap();
 
-      toast.success(String(successMessage ?? "Chat created successfully"));
+      // toast.success(String(successMessage ?? "Chat created successfully"));
     } catch (error: any) {
       console.log("error", error?.data?.errorMessage);
       toast.error(
@@ -103,13 +113,7 @@ function DashBoardLayout(props: any) {
     }
   };
 
-  if (isFetching) {
-    return (
-      <Box>
-        <IsFetching isFetching />
-      </Box>
-    );
-  }
+
 
   return (
     <Box>
@@ -167,14 +171,21 @@ function DashBoardLayout(props: any) {
                     }}
                   >
                     <Stack p={1} px={2} pl={0.8} gap={1}>
-                      <Typography
-                        variant="subtitle2"
-                        color="neutral.600"
-                        fontWeight={"bold"}
-                        pl={0.4}
+                      <Stack
+                        flexDirection={"row"}
+                        gap={2}
+                        alignItems={"center"}
                       >
-                        All Contacts
-                      </Typography>
+                        <Typography
+                          variant="subtitle2"
+                          color="neutral.600"
+                          fontWeight={"bold"}
+                          pl={0.4}
+                        >
+                          All Contacts
+                        </Typography>
+                        <CreateGroupModal />
+                      </Stack>
                       {isLoading || isFetching ? (
                         <Box>
                           <IsFetching isFetching />
@@ -188,7 +199,7 @@ function DashBoardLayout(props: any) {
                           sx={{
                             overflowY: "scroll",
                             "&::-webkit-scrollbar": {
-                              width: "0.4em",
+                              width: "0.6em",
                             },
                             "&::-webkit-scrollbar-thumb": {
                               backgroundColor: theme.palette.primary.main,
@@ -332,14 +343,21 @@ function DashBoardLayout(props: any) {
                       }}
                     >
                       <Stack p={1} px={2} pl={0.8} gap={1}>
-                        <Typography
-                          variant="subtitle2"
-                          color="neutral.600"
-                          fontWeight={"bold"}
-                          pl={0.4}
+                        <Stack
+                          flexDirection={"row"}
+                          gap={2}
+                          alignItems={"center"}
                         >
-                          All Contacts
-                        </Typography>
+                          <Typography
+                            variant="subtitle2"
+                            color="neutral.600"
+                            fontWeight={"bold"}
+                            pl={0.4}
+                          >
+                            All Contacts
+                          </Typography>
+                          <CreateGroupModal />
+                        </Stack>
                         {isLoading || isFetching ? (
                           <Box>
                             <IsFetching isFetching />
@@ -484,7 +502,7 @@ const ChatMain = ({ onlineUsers }: any) => {
             latestMessage: {
               content: data.message.content,
               sender: data.message.sender._id,
-              createdAt: data.message.createdAt
+              createdAt: data.message.createdAt,
             },
           };
 
@@ -547,8 +565,13 @@ const ChatMain = ({ onlineUsers }: any) => {
             },
           }}
         >
-          {chats?.map((item: any) => (
-            <ChatList onlineUsers={onlineUsers} key={item?._id} {...item} />
+          {chats?.map((item: any, index: any) => (
+            <ChatList
+              onlineUsers={onlineUsers}
+              key={item?._id}
+              {...item}
+              index={index}
+            />
           ))}
         </Box>
       ) : (
@@ -574,8 +597,11 @@ const ChatList = (props: any) => {
     groupChat,
     name,
     latestMessage,
+    creator,
+    index,
     onlineUsers = [],
   } = props;
+  const [mergedImage, setMergedImage] = useState<string | null>(null);
   const newMessagesAlert = useSelector(
     (state: any) => state.newMessagesAlert.newMessagesAlert
   );
@@ -585,166 +611,253 @@ const ChatList = (props: any) => {
   );
   const dispatch = useDispatch();
   const userID = useSelector((state: any) => state.auth?.user?._id);
+  useEffect(() => {
+    if (groupChat) {
+      // Merge avatars for group chat
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+
+      let avatars = members.map((member: any) => member?.avatar?.url);
+      avatars.push(creator?.avatar?.url);
+
+      const imagePromises = avatars.map((url: any) => {
+        return new Promise((resolve) => {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.src = url;
+          img.onload = () => resolve(img);
+        });
+      });
+
+      Promise.all(imagePromises).then((images: any) => {
+        // Adjust the canvas size and grid layout based on the number of avatars
+        const avatarCount = images.length;
+        let width = 100;
+        let height = 100;
+        let columns = 2;
+        let rows = 2;
+
+        // For 2 members, arrange avatars side by side in a single row
+        if (avatarCount === 2) {
+          columns = 1;
+          rows = 2;
+          width = 200; // Total width for 2 avatars side by side
+          height = 100;
+        }
+        // For 4 members, arrange in a 2x2 grid
+        else if (avatarCount === 4) {
+          columns = 2;
+          rows = 2;
+          width = 200; // Total width for 2 columns
+          height = 200; // Total height for 2 rows
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        images.forEach((img: any, index: number) => {
+          const x = (index % columns) * (width / columns);
+          const y = Math.floor(index / columns) * (height / rows);
+          ctx?.drawImage(img, x, y, width / columns, height / rows);
+        });
+
+        const mergedDataUrl = canvas.toDataURL();
+        setMergedImage(mergedDataUrl);
+      });
+    }
+  }, [groupChat, members]);
   return (
     <>
       <Tooltip
-        title={`${members[0]?.firstName} ${members[0]?.lastName}`}
+        title={
+          groupChat
+            ? `${name}`
+            : `${members[0]?.firstName} ${members[0]?.lastName}`
+        }
         placement="right-end"
       >
         <Link href={{ pathname: `/dashboard`, query: { chatId: _id } }}>
-          <Stack
-            gap={1}
-            alignItems={"flex-start"}
-            sx={{ width: "100%", px: 1 }}
-            onClick={() => dispatch(removeNewMessagesAlert(_id))}
+          <motion.div
+            initial={{ opacity: 0}}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 * index }}
           >
             <Stack
-              justifyContent="space-between"
-              alignItems="center"
-              flexDirection={"row"}
-              width="100%"
               gap={1}
-              py={1}
+              alignItems={"flex-start"}
+              sx={{ width: "100%", px: 1 }}
+              onClick={() => dispatch(removeNewMessagesAlert(_id))}
             >
-              <AvatarGroup max={4}>
-                {members.map((member: any) => (
-                  <Badge
-                    overlap="circular"
-                    anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-                    variant="dot"
-                    sx={(theme) => ({
-                      "& .MuiBadge-badge": {
-                        backgroundColor: onlineUsers.includes(member?._id)
-                          ? "#44b700"
-                          : "neutral.400",
-                        color: onlineUsers.includes(member?._id)
-                          ? "#44b700"
-                          : "neutral.400",
-                        boxShadow: `0 0 0 2px ${theme.palette.background.paper}`,
-                        "&::after": {
-                          position: "absolute",
-                          top: 0,
-                          left: 0,
-                          width: "100%",
-                          height: "100%",
-                          borderRadius: "50%",
-                          animation: "ripple 1.2s infinite ease-in-out",
-                          border: "1px solid currentColor",
-                          content: '""',
-                        },
-                      },
-                      "@keyframes ripple": {
-                        "0%": {
-                          transform: "scale(.8)",
-                          opacity: 1,
-                        },
-                        "100%": {
-                          transform: "scale(2.4)",
-                          opacity: 0,
-                        },
-                      },
-                    })}
-                  >
-                    <Avatar
-                      sx={{
-                        width: 50,
-                        height: 50,
-                        fontSize: 14,
-                        fontWeight: "bold",
-                        color: "white",
-                        bgcolor: "primary.main",
-                      }}
-                      alt=""
-                      variant="rounded"
-                      src={member?.avatar?.url}
-                    >
-                      {member?.firstName.charAt(0).toUpperCase()}
-                    </Avatar>
-                  </Badge>
-                ))}
-              </AvatarGroup>
-
-              <Stack gap={1}>
-                <Typography
-                  variant="body1"
-                  fontWeight={"bold"}
-                  color="text.primary"
-                  maxWidth={200}
-                  sx={{
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    display: "block",
-                  }}
-                >
-                  {groupChat
-                    ? name
-                    : `${members[0]?.firstName} ${members[0]?.lastName}`}
-                </Typography>
-                <Typography
-                  variant="subtitle2"
-                  fontWeight={"600"}
-                  color="neutral.600"
-                  maxWidth={200}
-                  sx={{
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    display: "block",
-                  }}
-                >
-                {userID === latestMessage?.sender ? "You: " : ""}  {latestMessage?.content}
-                </Typography>
-              </Stack>
               <Stack
-                justifyContent={"space-between"}
-                ml={"auto"}
-                alignContent={"center"}
-                alignItems={"center"}
+                justifyContent="space-between"
+                alignItems="center"
+                flexDirection={"row"}
+                width="100%"
                 gap={1}
+                py={1}
               >
-              {latestMessage?.createdAt &&(
-                <Typography
-                  whiteSpace={"nowrap"}
-                  color="neutral.600"
-                  fontSize={12}
-                >
-                  {dayjs(latestMessage?.createdAt).format("hh:mm A")}
-                </Typography>
-              )}
-                
-                {newMessages ? (
-                  <Box
+                {!groupChat ? (
+                  <AvatarGroup max={0}>
+                    {members.map((member: any) => (
+                      <Badge
+                        overlap="circular"
+                        anchorOrigin={{
+                          vertical: "bottom",
+                          horizontal: "right",
+                        }}
+                        variant="dot"
+                        sx={(theme) => ({
+                          "& .MuiBadge-badge": {
+                            backgroundColor: onlineUsers.includes(member?._id)
+                              ? "#44b700"
+                              : "neutral.400",
+                            color: onlineUsers.includes(member?._id)
+                              ? "#44b700"
+                              : "neutral.400",
+                            boxShadow: `0 0 0 2px ${theme.palette.background.paper}`,
+                            "&::after": {
+                              position: "absolute",
+                              top: 0,
+                              left: 0,
+                              width: "100%",
+                              height: "100%",
+                              borderRadius: "50%",
+                              animation: "ripple 1.2s infinite ease-in-out",
+                              border: "1px solid currentColor",
+                              content: '""',
+                            },
+                          },
+                          "@keyframes ripple": {
+                            "0%": {
+                              transform: "scale(.8)",
+                              opacity: 1,
+                            },
+                            "100%": {
+                              transform: "scale(2.4)",
+                              opacity: 0,
+                            },
+                          },
+                        })}
+                      >
+                        <Avatar
+                          sx={{
+                            width: 45,
+                            height: 45,
+                            fontSize: 14,
+                            fontWeight: "bold",
+                            color: "white",
+                            bgcolor: "primary.main",
+                          }}
+                          alt=""
+                          variant="circular"
+                          src={member?.avatar?.url}
+                        >
+                          {member?.firstName.charAt(0).toUpperCase()}
+                        </Avatar>
+                      </Badge>
+                    ))}
+                  </AvatarGroup>
+                ) : (
+                  <Avatar
                     sx={{
-                      width: "25px",
-                      height: "25px",
+                      width: 45,
+                      height: 45,
+                      fontSize: 14,
+                      fontWeight: "bold",
+                      color: "white",
                       bgcolor: "primary.main",
-                      borderRadius: 1,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
+                    }}
+                    alt=""
+                    variant="circular"
+                    src={mergedImage || ""}
+                  >
+                    {name?.charAt(0).toUpperCase()}
+                  </Avatar>
+                )}
+
+                <Stack gap={1}>
+                  <Typography
+                    variant="body1"
+                    fontWeight={"bold"}
+                    color="text.primary"
+                    maxWidth={200}
+                    sx={{
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      display: "block",
                     }}
                   >
+                    {groupChat
+                      ? name
+                      : `${members[0]?.firstName} ${members[0]?.lastName}`}
+                  </Typography>
+                  <Typography
+                    variant="subtitle2"
+                    fontWeight={"600"}
+                    color="neutral.600"
+                    maxWidth={200}
+                    sx={{
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      display: "block",
+                    }}
+                  >
+                    {userID === latestMessage?.sender ? "You: " : ""}{" "}
+                    {latestMessage?.content}
+                  </Typography>
+                </Stack>
+                <Stack
+                  justifyContent={"space-between"}
+                  ml={"auto"}
+                  alignContent={"center"}
+                  alignItems={"center"}
+                  gap={1}
+                >
+                  {latestMessage?.createdAt && (
                     <Typography
-                      sx={{
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                      variant="subtitle1"
-                      color="common.white"
+                      whiteSpace={"nowrap"}
+                      color="neutral.600"
+                      fontSize={12}
                     >
-                      {newMessages.count}
+                      {dayjs(latestMessage?.createdAt).format("hh:mm A")}
                     </Typography>
-                  </Box>
-                ) : null}
+                  )}
+
+                  {newMessages ? (
+                    <Box
+                      sx={{
+                        width: "25px",
+                        height: "25px",
+                        bgcolor: "primary.main",
+                        borderRadius: 1,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Typography
+                        sx={{
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                        variant="subtitle1"
+                        color="common.white"
+                      >
+                        {newMessages.count}
+                      </Typography>
+                    </Box>
+                  ) : null}
+                </Stack>
               </Stack>
+              <Divider
+                variant="fullWidth"
+                orientation="horizontal"
+                sx={{ borderColor: "neutral.300" }}
+              />
             </Stack>
-            <Divider
-              variant="fullWidth"
-              orientation="horizontal"
-              sx={{ borderColor: "neutral.300" }}
-            />
-          </Stack>
+          </motion.div>
         </Link>
       </Tooltip>
     </>

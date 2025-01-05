@@ -17,7 +17,7 @@ const chatAPI = baseAPI.injectEndpoints({
         method: "GET",
         params: payload.params,
       }),
-      providesTags: [CHATSSingle],
+      providesTags: [CHATS],
     }),
     postCreateChat: builder.mutation({
       query: (payload) => ({
@@ -37,6 +37,42 @@ const chatAPI = baseAPI.injectEndpoints({
       }),
       invalidatesTags: [CHATS],
     }),
+    CreateGroupChat: builder.mutation({
+      query: (payload) => ({
+        url: "/chats/groupChat",
+        method: "POST",
+        body: payload.body,
+        params: payload.params,
+      }),
+      invalidatesTags: [CHATS],
+    }),
+    UpdateGroupChatName: builder.mutation({
+      query: (payload) => ({
+        url: "/chats/updateGroupChatName",
+        method: "PATCH",
+        body: payload.body,
+        params: payload.params,
+      }),
+      invalidatesTags: [CHATSSingle, CHATS],
+    }),
+    UpdateGroupChatCreator: builder.mutation({
+      query: (payload) => ({
+        url: "/chats/updateGroupChatCreator",
+        method: "PATCH",
+        body: payload.body,
+        params: payload.params,
+      }),
+      invalidatesTags: [CHATSSingle, CHATS],
+    }),
+    UpdateGroupChatMembers: builder.mutation({
+      query: (payload) => ({
+        url: "/chats/updateGroupChatMembers",
+        method: "PATCH",
+        body: payload.body,
+        params: payload.params,
+      }),
+      invalidatesTags: [CHATSSingle, CHATS],
+    }),
   }),
 });
 
@@ -45,4 +81,8 @@ export const {
   usePostCreateChatMutation,
   useDeleteChatMutation,
   useGetChatSingleListQuery,
+  useCreateGroupChatMutation,
+  useUpdateGroupChatNameMutation,
+  useUpdateGroupChatCreatorMutation,
+  useUpdateGroupChatMembersMutation,
 } = chatAPI;

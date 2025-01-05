@@ -1,5 +1,11 @@
-import React, { useState } from "react";
+import { NoContent } from "@assets/common";
+import { IsFetching } from "@components/table-components";
+import { getSocket } from "@contexts/socket/socket";
+import { socketEvent } from "@enums/event";
+import CloseIcon from "@mui/icons-material/Close";
+import DoneIcon from "@mui/icons-material/Done";
 import NotificationsIcon from "@mui/icons-material/Notifications";
+import { LoadingButton } from "@mui/lab";
 import {
   Avatar,
   Badge,
@@ -13,43 +19,34 @@ import {
   Typography,
   useTheme,
 } from "@mui/material";
-import { CustomModal } from "@components/custom-modal";
-import DoneIcon from "@mui/icons-material/Done";
-import CloseIcon from "@mui/icons-material/Close";
-import { useGetSearchUserApiQuery } from "@services/search/search-api";
-import { IsFetching, NoContentFound } from "@components/table-components";
-import { useDispatch, useSelector } from "react-redux";
-import { getSocket } from "@contexts/socket/socket";
-import { micsActions } from "@store/slice/mics/reducer";
-import { socketEvent } from "@enums/event";
 import {
   useGetNotificationQuery,
   usePostAcceptRequestMutation,
-  usePostCreateRequestMutation,
 } from "@services/request/requestApi";
-import { NoContent } from "@assets/common";
-import { LoadingButton } from "@mui/lab";
+import { micsActions } from "@store/slice/mics/reducer";
+import React, { useState } from "react";
 import toast from "react-hot-toast";
+import { useDispatch, useSelector } from "react-redux";
 
 function NotificationsModal() {
   const notificationCount = useSelector(
     (state: any) => state.mics.NotificationCount
   );
 
-   const [anchorEl, setAnchorEl] = React.useState<HTMLButtonElement | null>(
-      null
-    );
-  
-    const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-      setAnchorEl(event.currentTarget);
-    };
-  
-    const handleClose = () => {
-      setAnchorEl(null);
-    };
-  
-    const open = Boolean(anchorEl);
-    const id = open ? "simple-popover" : undefined;
+  const [anchorEl, setAnchorEl] = React.useState<HTMLButtonElement | null>(
+    null
+  );
+
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
+  const open = Boolean(anchorEl);
+  const id = open ? "simple-popover" : undefined;
   const [params, setParams] = useState({
     search: "",
     page: 1,

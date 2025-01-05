@@ -1,7 +1,9 @@
+import { NoContent } from "@assets/common";
 import { CustomModal } from "@components/custom-modal";
 import { IsFetching } from "@components/table-components";
 import AddIcon from "@mui/icons-material/Add";
 import SearchIcon from "@mui/icons-material/Search";
+import { LoadingButton } from "@mui/lab";
 import {
   Avatar,
   Box,
@@ -15,14 +17,11 @@ import {
   Typography,
   useTheme,
 } from "@mui/material";
+import { usePostCreateRequestMutation } from "@services/request/requestApi";
 import { useGetSearchUserApiQuery } from "@services/search/search-api";
 import { debounce } from "lodash";
 import { useState } from "react";
-import { NoContent } from "@assets/common";
-import { usePostCreateRequestMutation } from "@services/request/requestApi";
-import { LoadingButton } from "@mui/lab";
 import toast from "react-hot-toast";
-import { useDispatch } from "react-redux";
 
 function SearchUserModal() {
   const [open, setOpen] = useState(false);
