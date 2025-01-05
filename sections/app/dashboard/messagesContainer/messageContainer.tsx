@@ -1,6 +1,7 @@
 "use client";
 import { NoContent } from "@assets/common";
 import { FormProvider, RHFTextField } from "@components/rhf";
+import { IsFetching } from "@components/table-components";
 import { getSocket } from "@contexts/socket/socket";
 import { socketEvent } from "@enums/event";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -21,7 +22,7 @@ import { useGetMessagesListQuery } from "@services/message/message";
 import { isToday, isYesterday, format } from "date-fns";
 import dayjs from "dayjs";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useSelector } from "react-redux";
 import * as Yup from "yup";
@@ -174,14 +175,14 @@ function MessageContainer(props: any) {
     if (isYesterday(messageDate)) return "Yesterday";
     return format(messageDate, "dd MMM yyyy");
   };
- const groupedMessages = useMemo(() => {
-   return messages.reduce((groups: any, message: any) => {
-     const dateKey = formatDate(message.createdAt);
-     if (!groups[dateKey]) groups[dateKey] = [];
-     groups[dateKey].push(message);
-     return groups;
-   }, {});
- }, [messages]);
+  const groupedMessages = useMemo(() => {
+    return messages.reduce((groups: any, message: any) => {
+      const dateKey = formatDate(message.createdAt);
+      if (!groups[dateKey]) groups[dateKey] = [];
+      groups[dateKey].push(message);
+      return groups;
+    }, {});
+  }, [messages]);
   useEffect(() => {
     if (isError) {
       router.push("/dashboard");
@@ -189,9 +190,11 @@ function MessageContainer(props: any) {
   }, [isError]);
 
   if (isLoading) {
-    <Stack justifyContent="center" alignItems="center">
-      <CircularProgress size={24} />
-    </Stack>;
+    return (
+      <Box height={"50vh"}  position={"relative"}>
+        <IsFetching isFetching />
+      </Box>
+    );
   }
   return (
     <>
@@ -339,8 +342,8 @@ function MessageContainer(props: any) {
   );
 }
 
-export default MessageContainer;
-const Message = (props: any) => {
+export default memo(MessageContainer) as any;
+const Message = memo((props: any) => {
   const { content, createdAt, sender, hideAvatar, system } = props;
   const userId = useSelector((state: any) => state.auth.user?._id);
   if (system) {
@@ -424,4 +427,4 @@ const Message = (props: any) => {
       </Stack>
     </Stack>
   );
-};
+});

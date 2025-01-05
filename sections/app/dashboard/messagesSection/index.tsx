@@ -41,6 +41,7 @@ function MessagesSection() {
     data,
     isLoading: isLoadingChat,
     isError,
+    isFetching,
   } = useGetChatSingleListQuery({ params: { chatId } });
   const [DeleteChat, { isLoading }] = useDeleteChatMutation();
   const { onlineUsers: onlineUsersState } = useSelector(
@@ -114,6 +115,7 @@ function MessagesSection() {
     }
   }, [data]);
 
+
   const handleDelete = async () => {
     try {
       const { successMessage }: any = await DeleteChat({
@@ -132,9 +134,9 @@ function MessagesSection() {
       router.push("/dashboard");
     }
   }, [isError]);
-  if (isLoadingChat) {
+  if (isLoadingChat || isFetching) {
     return (
-      <Box>
+      <Box position={"relative"}>
         <IsFetching isFetching />
       </Box>
     );
@@ -320,6 +322,7 @@ function MessagesSection() {
                 popState={setAnchorEl}
                 apiData={data?.data}
                 isCreator={data?.data?.creator?._id === userData?._id}
+                isFetching={isFetching}
               />
             ) : null}
           </List>

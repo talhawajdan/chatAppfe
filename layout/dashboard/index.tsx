@@ -1,5 +1,5 @@
 "use client";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { memo, useCallback, useEffect, useState } from "react";
 
 import { NoContent } from "@assets/common";
 import LogoIcon from "@assets/icons/logo-icon";
@@ -43,18 +43,20 @@ import { useDispatch, useSelector } from "react-redux";
 import CreateGroupModal from "./createGroupModal/createGroupModal";
 import TopNavBar from "./top-navbar";
 import { motion } from "framer-motion";
+import { micsActions } from "@store/slice/mics/reducer";
 
 function DashBoardLayout(props: any) {
   const { children } = props;
   const [drawerOpen, setDrawerOpen] = React.useState(false);
-  const [onlineUsers, setOnlineUsers] = React.useState<any>([]);
+  const onlineUsers = useSelector((state: any) => state.mics.onlineUsers);
   const dispatch = useDispatch();
 
   ///socket works
+
   const socket = getSocket();
   useEffect(() => {
     const handleOnlineUsers = (data: any) => {
-      setOnlineUsers(data);
+      dispatch(micsActions.setOnlineUsers(data));
     };
     const handleRefresh = (data: any) => {
       dispatch(baseAPI.util.invalidateTags([CHATSSingle, CHATS]));
@@ -67,7 +69,7 @@ function DashBoardLayout(props: any) {
       socket.off(socketEvent.onlineUsers, handleOnlineUsers);
       socket.off(socketEvent.refetchRequest, handleRefresh);
     };
-  }, [onlineUsers, socket, dispatch]);
+  }, [socket, dispatch]);
 
   const toggleDrawer = (newOpen: boolean) => () => {
     setDrawerOpen(newOpen);
@@ -112,8 +114,6 @@ function DashBoardLayout(props: any) {
       );
     }
   };
-
-
 
   return (
     <Box>
@@ -476,7 +476,7 @@ function DashBoardLayout(props: any) {
 
 export default DashBoardLayout;
 
-const ChatMain = ({ onlineUsers }: any) => {
+const ChatMain = memo(({ onlineUsers }: any) => {
   const { data, isLoading, isFetching, isError } = useGetChatsListQuery({});
   const theme = useTheme();
   const socket = getSocket();
@@ -522,13 +522,6 @@ const ChatMain = ({ onlineUsers }: any) => {
     [socketEvent.NewMessageAlert]: updateChats,
   };
   useSocketEvents(socket, eventHandler);
-  if (isFetching) {
-    return (
-      <Box>
-        <IsFetching isFetching />
-      </Box>
-    );
-  }
 
   return (
     <Stack
@@ -547,7 +540,7 @@ const ChatMain = ({ onlineUsers }: any) => {
       }}
     >
       {isLoading || isFetching ? (
-        <Box>
+        <Box position={"relative"}>
           <IsFetching isFetching />
         </Box>
       ) : chats && chats.length > 0 && !isError ? (
@@ -588,9 +581,9 @@ const ChatMain = ({ onlineUsers }: any) => {
       )}
     </Stack>
   );
-};
+});
 
-const ChatList = (props: any) => {
+const ChatList = memo((props: any) => {
   const {
     _id,
     members,
@@ -678,7 +671,7 @@ const ChatList = (props: any) => {
       >
         <Link href={{ pathname: `/dashboard`, query: { chatId: _id } }}>
           <motion.div
-            initial={{ opacity: 0}}
+            initial={{ opacity: 0 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 * index }}
           >
@@ -862,4 +855,4 @@ const ChatList = (props: any) => {
       </Tooltip>
     </>
   );
-};
+});

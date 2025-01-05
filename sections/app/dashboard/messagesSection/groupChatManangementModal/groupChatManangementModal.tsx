@@ -4,13 +4,18 @@ import {
   RHFAutocompleteAsync,
   RHFTextField,
 } from "@components/rhf";
+import { IsFetching } from "@components/table-components";
 import { yupResolver } from "@hookform/resolvers/yup";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import GroupsIcon from "@mui/icons-material/Groups";
 import { LoadingButton } from "@mui/lab";
 import { Box, Stack, Tooltip, Typography } from "@mui/material";
 import Button from "@mui/material/Button";
-import { useUpdateGroupChatCreatorMutation, useUpdateGroupChatMembersMutation, useUpdateGroupChatNameMutation } from "@services/chats/chat-api";
+import {
+  useUpdateGroupChatCreatorMutation,
+  useUpdateGroupChatMembersMutation,
+  useUpdateGroupChatNameMutation,
+} from "@services/chats/chat-api";
 import { useLazyGetContactsListQuery } from "@services/contacts/contacts-api";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -26,7 +31,7 @@ function GroupChatManagementModal(props: any) {
   const [openGroupName, setOpenGroupName] = useState(false);
   const [openGroupAdmin, setOpenGroupAdmin] = useState(false);
   const [openGroupMember, setOpenGroupMember] = useState(false);
-  const { apiData, isCreator } = props;
+  const { apiData, isCreator, isFetching } = props;
   console.log(apiData);
   const methods = useForm<any>({
     defaultValues: {
@@ -40,7 +45,13 @@ function GroupChatManagementModal(props: any) {
     resolver: yupResolver(FormSchema),
   });
   const listOfContacts = useLazyGetContactsListQuery();
-
+  if (isFetching) {
+    return (
+      <Box>
+        <IsFetching isFetching />
+      </Box>
+    );
+  }
   return (
     <>
       <Button
@@ -194,18 +205,18 @@ const UpdateGroupName = (props: any) => {
       chatId,
       NewGroupName: data.name,
     };
-     try {
-       const { successMessage } = await UpdateGroupChatName({
-         body: payload,
-       }).unwrap();
-       toast.success(successMessage ?? "success");
-       setOpenGroupName(false);
-     } catch (error: any) {
-       toast.error(
-         error?.data?.errorMessage?.message ?? "Something went wrong!"
-       );
-       setOpenGroupName(false);
-     }
+    try {
+      const { successMessage } = await UpdateGroupChatName({
+        body: payload,
+      }).unwrap();
+      toast.success(successMessage ?? "success");
+      setOpenGroupName(false);
+    } catch (error: any) {
+      toast.error(
+        error?.data?.errorMessage?.message ?? "Something went wrong!"
+      );
+      setOpenGroupName(false);
+    }
   };
   return (
     <CustomModal
@@ -259,8 +270,8 @@ const UpdateGroupName = (props: any) => {
 };
 const UpdateGroupAdminName = (props: any) => {
   const { apiData, openGroupAdmin, setOpenGroupAdmin } = props;
-   const searchParams = useSearchParams();
-   const chatId = searchParams.get("chatId");
+  const searchParams = useSearchParams();
+  const chatId = searchParams.get("chatId");
   const methods = useForm<any>({
     defaultValues: {
       creator: apiData?.creator,
@@ -280,18 +291,18 @@ const UpdateGroupAdminName = (props: any) => {
       chatId,
       newCreatorId: data.creator._id,
     };
-     try {
-       const { successMessage } = await UpdateGroupChatAdmin({
-         body: payload,
-       }).unwrap();
-       toast.success(successMessage ?? "success");
-       setOpenGroupAdmin(false);
-     } catch (error: any) {
-       toast.error(
-         error?.data?.errorMessage?.message ?? "Something went wrong!"
-       );
-       setOpenGroupAdmin(false);
-     }
+    try {
+      const { successMessage } = await UpdateGroupChatAdmin({
+        body: payload,
+      }).unwrap();
+      toast.success(successMessage ?? "success");
+      setOpenGroupAdmin(false);
+    } catch (error: any) {
+      toast.error(
+        error?.data?.errorMessage?.message ?? "Something went wrong!"
+      );
+      setOpenGroupAdmin(false);
+    }
   };
   const listOfContacts = useLazyGetContactsListQuery();
   return (
@@ -368,8 +379,8 @@ const UpdateGroupAdminName = (props: any) => {
 };
 const UpdateGroupMembers = (props: any) => {
   const { apiData, openGroupMember, setOpenGroupMember } = props;
-   const searchParams = useSearchParams();
-   const chatId = searchParams.get("chatId");
+  const searchParams = useSearchParams();
+  const chatId = searchParams.get("chatId");
   const methods = useForm<any>({
     defaultValues: {
       members: apiData?.members,
@@ -381,27 +392,24 @@ const UpdateGroupMembers = (props: any) => {
     ),
   });
   const { handleSubmit } = methods;
-   const [UpdateGroupChatMembers, { isLoading }] =
-     useUpdateGroupChatMembersMutation();
+  const [UpdateGroupChatMembers, { isLoading }] =
+    useUpdateGroupChatMembersMutation();
   const onSubmit = async (data: any) => {
- 
     const payload = {
       chatId,
       newMembers: data.members.map((member: any) => member._id),
     };
-   
-     try {
-       const { successMessage } = await UpdateGroupChatMembers({
-         body: payload,
-       }).unwrap();
-       toast.success(successMessage ?? "success");
-       setOpenGroupMember(false);
-     } catch (error: any) {
-       toast.error(
-         error?.data?.errorMessage ?? "Something went wrong!"
-       );
-       setOpenGroupMember(false);
-     }
+
+    try {
+      const { successMessage } = await UpdateGroupChatMembers({
+        body: payload,
+      }).unwrap();
+      toast.success(successMessage ?? "success");
+      setOpenGroupMember(false);
+    } catch (error: any) {
+      toast.error(error?.data?.errorMessage ?? "Something went wrong!");
+      setOpenGroupMember(false);
+    }
   };
   const listOfContacts = useLazyGetContactsListQuery();
   return (

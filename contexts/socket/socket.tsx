@@ -33,21 +33,7 @@ const SocketProvider = ({ children }: any) => {
     }
   }, []); // Only run once on initial mount
 
-  useEffect(() => {
-    if (socket) {
-      socket.on(socketEvent.onlineUsers, (data:any) => {
-       
-        dispatch(micsActions.setOnlineUsers(data));
-        
-      });
-
-      // Cleanup socket event listeners on unmount
-      return () => {
-        socket.off("connect");
-      };
-    }
-  }, [socket]);
-
+  
   if (!socket) {
     return (
       <SplashScreen>
