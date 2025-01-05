@@ -30,7 +30,6 @@ export const metadata: Metadata = {
         type: "image/png",
         sizes: "32x32",
       },
-      
     ],
     apple: {
       rel: "icon",
@@ -38,12 +37,11 @@ export const metadata: Metadata = {
       type: "image/png",
       sizes: "180x180",
     },
-    
   },
   openGraph: {
     title: "Chatee",
     description: "Powered by Chatee",
-    url: "https://recruiting-pl.apiswagger.co.uk/",
+    url: "https://chatappfe-three.vercel.app/",
     type: "website",
     images: [
       {
@@ -89,7 +87,7 @@ async function Layout(props: LayoutProps): Promise<JSX.Element> {
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <body  className={openSans.className}>
+      <body className={openSans.className}>
         <RootLayout>
           {children}
           <NProgress />
